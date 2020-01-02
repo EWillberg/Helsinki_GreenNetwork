@@ -35,12 +35,12 @@ def GVI_to_segments(roadNetwork, GVIpoints, roadID_field, outName):
     Input:  1) Point layer containing GVI index
             2) Street network layer covering the extent of the GVI point layer
 
-    Output: 2) Street network layer with the GVI index attached for all the segments within 30m from GVI points
+    Output: 1) Street network layer with the GVI index attached for all the segments within 30m from GVI points
     """
 
     # Check that projections of the input dataframes match and reproject if necessary
     if GVIpoints.crs != roadNetwork.crs:
-        epsg = CRS(streetNetworkDF.crs).to_epsg()
+        epsg = CRS(roadNetwork.crs).to_epsg()
         GVIpoints = GVIpoints.to_crs(epsg=epsg)
 
     # Create a 30m buffer around streetNetwork segments
