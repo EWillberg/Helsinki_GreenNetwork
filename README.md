@@ -1,2 +1,2 @@
 # Helsinki_green_network
-The repository contains scripts that attach green view index (GVI) points to the street network in Helsinki
+The repository contains scripts that attach green view index (GVI) based on Google Street View images (GSV) to the street network in Helsinki. The scripts are an extension to the scripts done here: https://github.com/akselitoikka/Helsinki_GreenView 
