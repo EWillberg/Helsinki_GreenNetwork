@@ -2,7 +2,7 @@
 
 """
 Usage:
-    This script is intended for attaching the Google Street View (GSV)based green view index (GVI)
+    This script is intended for attaching the Google Street View (GSV) based green view index (GVI)
     from points to road segments.
 
 Created
