@@ -3,7 +3,8 @@
 """
 Usage:
     This script is intended for attaching the Google Street View (GSV) based green view index (GVI)
-    from points to road segments.
+    from points to road segments. To use this script, you a point layer containing GVI index for each point
+    as well a street network layer covering the extent of the point layer.
 
 Created
     20.10.2019
@@ -32,8 +33,10 @@ GVIpointsDF = gpd.read_file(GVIpointsPath)
 def GVI_to_segments(roadNetwork, GVIpoints, roadID_field, outName):
 
     """
-    Input:  1) Point layer containing GVI index
-            2) Street network layer covering the extent of the GVI point layer
+    Input:  1) roadNetwork = Point layer containing GVI index
+            2) GVIpoints = Street network layer covering the extent of the GVI point layer
+            3) roadID_field = The name of the column containing unique IDs for road segments
+            4) outName = Output file name
 
     Output: 1) Street network layer with the GVI index attached for all the segments within 30m from GVI points
     """
@@ -43,7 +46,7 @@ def GVI_to_segments(roadNetwork, GVIpoints, roadID_field, outName):
         epsg = CRS(roadNetwork.crs).to_epsg()
         GVIpoints = GVIpoints.to_crs(epsg=epsg)
 
-    # Create a 30m buffer around streetNetwork segments
+    # Create a 30m buffer around each GVI point
     GVIpointsBufferDF = GVIpoints.copy()
     GVIpointsBufferDF["geometry"] = GVIpointsBufferDF.geometry.buffer(30)
 
@@ -51,22 +54,22 @@ def GVI_to_segments(roadNetwork, GVIpoints, roadID_field, outName):
     RoadNetworkCentroidsDF = roadNetwork.copy()
     RoadNetworkCentroidsDF['geometry'] = roadNetwork.geometry.centroid
 
-    # Make a spatial join to identify all the road segment buffers that intersect with GVI points
+    # Make a spatial join to identify all the road centroids that intersect with GVI point buffers
     pointJoin = gpd.sjoin(GVIpointsBufferDF, RoadNetworkCentroidsDF, how='inner', op='intersects')
 
     # Dissolve the joined layer based on road segment ID using mean aggfunc. This creates a mean GVI
-    # for each road segment. Reduce then the "dissolve" dataframe only to contain necessary columns
+    # for each road segment. Reduce then the 'dissolve' dataframe to contain only the necessary columns
     dissolve = pointJoin.dissolve(by=roadID_field, aggfunc='mean').reset_index()
     dissolve = dissolve[[roadID_field, "Gvi_Mean"]]
 
-    # Join the GVI index from the "dissolve" dataframe back to the "roadNetwork" dataframe
+    # Join the GVI index from the 'dissolve' dataframe back to the original 'roadNetwork' dataframe
     roadNetwork = pd.merge(roadNetwork, dissolve, how = "left", left_on=roadID_field, right_on=dissolve[roadID_field])
 
-    # Examine the result
+    # Examine the result as map
     my_map = roadNetwork.plot(column="Gvi_Mean", linewidth=0.4, cmap="RdYlGn", scheme="quantiles", k=9, alpha=0.9,
                                   legend=True)
 
-    # Write the result
+    # Write the result out
     outfp = outName+".shp"
     roadNetwork.to_file(outfp)
 
