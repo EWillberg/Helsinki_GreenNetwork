@@ -7,7 +7,8 @@ Usage:
     based green view index. The script identifies all the segments without GVI index and calculates the land use
     based GVI for these segments
 
-     NOTE: THE REQUIRED INPUT DATASETS NEED TO BE STORED IN POSTGRESQL DATABASE WITH POSTGIS EXTENSION ENABLED
+     NOTE: MAJORITY OF THE SCRIPT IS DESIGNED WITH POSTGRESQL&PYTHON INTEGRATION. THE REQUIRED INPUT DATAS ETS NEED
+     TO BE STORED IN POSTGRESQL DATABASE WITH A POSTGIS EXTENSION ENABLED
 
 Created
     22.10.2019
@@ -32,11 +33,15 @@ con.autocommit = True
 def TreeCover_GVI_to_segments(roadNetworkTable, treeLayerTable, roadNetworkSchema, treelayerSchame,
                               roadLayerIDfield, treeLayerIDfield):
     """
-    Input:  1) Land use layer containing over 2m tree cover as polygons.
-                Similar to this dataset: https://hri.fi/data/en_GB/dataset/paakaupunkiseudun-maanpeiteaineisto
-            2) Street network layer WITH Google Street View based green view index
+    NOTE: THE REQUIRED INPUT DATASETS NEED TO BE STORED IN POSTGRESQL DATABASE WITH POSTGIS EXTENSION ENABLED
 
-            NOTE: THE REQUIRED INPUT DATASETS NEED TO BE STORED IN POSTGRESQL DATABASE WITH POSTGIS EXTENSION ENABLED
+    Input:  1) roadNetworkTable = Street network table WITH Google Street View based green view index
+            2) treeLayerTable = Land use table containing over 2m tree cover as polygons
+                Similar to this dataset: https://hri.fi/data/en_GB/dataset/paakaupunkiseudun-maanpeiteaineisto
+            3) roadNetworkSchema = Schema name for roadNetworkTable
+            4) treelayerSchame = Schema name for treeLayerTable
+            5) roadLayerIDfield = The name of the column containing unique IDs for road segments
+            6) treeLayerIDfield = The name of the column containing unique IDs for tree polygons
 
     Output: 1) Street network layer with full GVI index (GSV + land use) attached for all the segments
     """
@@ -56,7 +61,7 @@ def TreeCover_GVI_to_segments(roadNetworkTable, treeLayerTable, roadNetworkSchem
                    "SET geom=ST_Multi(ST_CollectionExtract(ST_MakeValid(geom), 3)) "
                    "WHERE NOT ST_IsValid(geom);")
 
-    # Create a table of the street network with 30m buffer zone around each street segment as tbe geometry
+    # Create a table of the street network with 30m buffer zone where the buffer geometry is tbe geometry column
     cursor.execute("CREATE TABLE " + str(roadNetworkSchema) + ".streetnetwork_buffer_test AS "
                    "AS SELECT " + str(roadLayerIDfield) + ", st_buffer(geom, 30):: geometry(geometry, " + str(epsg) + ") AS geom "
                     "FROM " + str(roadNetworkSchema) + "." + str(roadNetworkTable) + ";")
@@ -72,7 +77,7 @@ def TreeCover_GVI_to_segments(roadNetworkTable, treeLayerTable, roadNetworkSchem
                    "ORDER BY bn." + str(roadLayerIDfield) + ", tr." + str(treeLayerIDfield) + ", pct_in DESC;")
 
     # Group the tree cover polygons together and calculate the combined area and the share of tree cover of the total
-    # buffer poltgon area. The share will be used as the green index for each segment
+    # buffer poltgon area. The share is the green index for each segment
     cursor.execute("SELECT buffer, buffer_area, sum(area_piece) as intersect_area, sum(pct_in) as prct "
                    "FROM "+ str(roadNetworkSchema) + ".over2m_trees_within_streetnetwork_buffer"
                    "GROUP BY buffer, buffer_area;")
@@ -89,9 +94,7 @@ def TreeCover_GVI_to_segments(roadNetworkTable, treeLayerTable, roadNetworkSchem
     con.commit()
     con.close()
 
-
-
-# Test run
+# Run the function (change the parameters to your own)
 TreeCover_GVI_to_segments("bikenetwork_with_gsv_green_index", "maanpeite_puusto_yli_2m_2018", "bss_green_index",
                           "bss_green_index", "fid_1", "id")
 
