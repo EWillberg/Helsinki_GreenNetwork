@@ -27,8 +27,8 @@ roadNetworkPath = "" # filepath here
 GVIpointsPath = "" # filepath here
 
 # Read data
-roadNetworkDF = gpd.read_file(roadNetworkPath)
-GVIpointsDF = gpd.read_file(GVIpointsPath)
+roadNetworkData = gpd.read_file(roadNetworkPath)
+GVIpointsData = gpd.read_file(GVIpointsPath)
 
 def GVI_to_segments(roadNetwork, GVIpoints, roadID_field, outName):
 
@@ -65,8 +65,11 @@ def GVI_to_segments(roadNetwork, GVIpoints, roadID_field, outName):
     # Join the GVI index from the 'dissolve' dataframe back to the original 'roadNetwork' dataframe
     roadNetwork = pd.merge(roadNetwork, dissolve, how = "left", left_on=roadID_field, right_on=dissolve[roadID_field])
 
+    # Rename the GVI column
+    roadNetwork.rename(columns={"Gvi_Mean" : "GSV_GVI"})
+
     # Examine the result as map
-    my_map = roadNetwork.plot(column="Gvi_Mean", linewidth=0.4, cmap="RdYlGn", scheme="quantiles", k=9, alpha=0.9,
+    my_map = roadNetworkDF.plot(column="Gvi_Mean", linewidth=0.4, cmap="RdYlGn", scheme="quantiles", k=9, alpha=0.9,
                                   legend=True)
 
     # Write the result out
@@ -74,7 +77,7 @@ def GVI_to_segments(roadNetwork, GVIpoints, roadID_field, outName):
     roadNetwork.to_file(outfp)
 
     # Return the result
-    return roadNetwork
+    return roadNetworkDF
 
     print("Operation successfully finished")
 
