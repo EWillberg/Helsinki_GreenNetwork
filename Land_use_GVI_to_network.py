@@ -69,7 +69,7 @@ def TreeCover_GVI_to_segments(roadNetworkTable, treeLayerTable, roadNetworkSchem
     # Run the intersection between the street buffer polygons and the tree cover polygons. The function also
     # calculates the share of each tree cover polygon area of the total buffer polygon area in m2
     cursor.execute("CREATE TABLE " + str(roadNetworkSchema) + ".over2m_trees_within_streetnetwork_buffer AS "
-                   "SELECT tr." + str(treeLayerIDfield) + " AS trees, bn." + str(roadLayerIDfield) + " AS buffer, ST_Area(bn.geom) as buffer_area, "
+                   "SELECT tr." + str(treeLayerIDfield) + " AS trees, bn." + str(roadLayerIDfield) + " AS buffer, ST_Area(bn.geom) as buf_area, "
                    "ROUND((ST_Area(ST_Intersection(tr.geom, bn.geom)))::numeric,2) AS area_piece, "
                    "ROUND((ST_Area(ST_Intersection(tr.geom, bn.geom)) / ST_Area(bn.geom) * 100)::numeric,1) AS pct_in "
                    "FROM " + str(roadNetworkSchema) + "." + str(roadNetworkTable) + " bn, " + str(treelayerSchame) + "." + str(treeLayerTable) + " tr "
@@ -78,19 +78,28 @@ def TreeCover_GVI_to_segments(roadNetworkTable, treeLayerTable, roadNetworkSchem
 
     # Group the tree cover polygons together and calculate the combined area and the share of tree cover of the total
     # buffer poltgon area. The share is the green index for each segment
-    cursor.execute("SELECT buffer, buffer_area, sum(area_piece) as intersect_area, sum(pct_in) as prct "
+    cursor.execute("SELECT buffer, buf_area, sum(area_piece) as lu_area, sum(pct_in) as lu_gvi "
                    "FROM "+ str(roadNetworkSchema) + ".over2m_trees_within_streetnetwork_buffer"
-                   "GROUP BY buffer, buffer_area;")
+                   "GROUP BY buffer, buf_area;")
 
     # Create a new table where the result table of tree cover based green index is joined to street network layer
     cursor.execute("CREATE TABLE " + str(roadNetworkSchema) + ".bikenetwork_with_full_gsv_landUse_green_index AS "
                    "SELECT st.*, subquery.* "
                    "FROM " + str(roadNetworkSchema) + "." + str(roadNetworkTable) + " AS st "
-                   "INNER JOIN (SELECT buffer, buffer_area, sum(area_piece) as intersect_area, sum(pct_in) as prct "
+                   "INNER JOIN (SELECT buffer, buf_area, sum(area_piece) as lu_area, sum(pct_in) as lu_gvi "
                    "FROM " + str(roadNetworkSchema) + ".over2m_trees_within_streetnetwork_buffer "
-                   "GROUP BY buffer, buffer_area) as subquery "
+                   "GROUP BY buffer, buf_area) as subquery "
                    "ON st." + + treeLayerIDfield + "= subquery.buffer;")
 
+    # Create a new column to the table for the combined index
+    cursor.execute("ALTER TABLE " + str(roadNetworkSchema) + ".bikenetwork_with_full_gsv_landUse_green_index "
+                   "ADD comb_gvi numeric;")
+
+    # Fill the combined index column. If GSV based GVI is available (not -1) use that else use land use based index
+    cursor.execute("UPDATE " + str(roadNetworkSchema) + ".bikenetwork_with_full_gsv_landUse_green_index "
+                   "SET comb_gvi = case when (gsv_gvi = -1) then lu_gvi else gsv_gvi end;")
+
+    # Commit all the changes and close the connection to the database
     con.commit()
     con.close()
 
