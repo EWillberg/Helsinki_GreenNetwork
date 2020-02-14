@@ -95,9 +95,17 @@ def TreeCover_GVI_to_segments(roadNetworkTable, treeLayerTable, roadNetworkSchem
     cursor.execute("ALTER TABLE " + str(roadNetworkSchema) + ".bikenetwork_with_full_gsv_landUse_green_index "
                    "ADD comb_gvi numeric;")
 
+    # Create a new column to the table to indicate the source of the combined index
+    cursor.execute("ALTER TABLE " + str(roadNetworkSchema) + ".bikenetwork_with_full_gsv_landUse_green_index "
+                    "ADD gvi_source text;")
+
     # Fill the combined index column. If GSV based GVI is available (not -1) use that else use land use based index
     cursor.execute("UPDATE " + str(roadNetworkSchema) + ".bikenetwork_with_full_gsv_landUse_green_index "
                    "SET comb_gvi = case when (gsv_gvi = -1) then lu_gvi else gsv_gvi end;")
+
+    # Fill the gvi_source column based on which value GVI is based.
+    cursor.execute("UPDATE " + str(roadNetworkSchema) + ".bikenetwork_with_full_gsv_landUse_green_index "
+                   "SET gvi_source = case when (gsv_gvi = -1) then 'land_use' else 'gsv' end;")
 
     # Commit all the changes and close the connection to the database
     con.commit()
