@@ -66,10 +66,10 @@ def GVI_to_segments(roadNetwork, GVIpoints, roadID_field, outName):
     roadNetwork = pd.merge(roadNetwork, dissolve, how = "left", left_on=roadID_field, right_on=dissolve[roadID_field])
 
     # Rename the GVI column
-    roadNetwork.rename(columns={"Gvi_Mean" : "GSV_GVI"})
+    roadNetwork.rename(columns={"Gvi_Mean" : "gsv_gvi"})
 
     # Fill the null valuess in GSV_GVI field with -1
-    roadNetwork["GSV_GVI"] = roadNetwork["GSV_GVI"].fillna(-1)
+    roadNetwork["gsv_gvi"] = roadNetwork["gsv_gvi"].fillna(-1)
 
     # Examine the result as map
     my_map = roadNetworkDF.plot(column="Gvi_Mean", linewidth=0.4, cmap="RdYlGn", scheme="quantiles", k=9, alpha=0.9,
